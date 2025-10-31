@@ -10,8 +10,9 @@ document.addEventListener("DOMContentLoaded", () => {
       const response = await fetch("/activities");
       const activities = await response.json();
 
-      // Clear loading message
-      activitiesList.innerHTML = "";
+  // Clear loading message and reset activity select
+  activitiesList.innerHTML = "";
+  activitySelect.innerHTML = '<option value="">-- Select an activity --</option>';
 
       // Populate activities list
       Object.entries(activities).forEach(([name, details]) => {
@@ -20,11 +21,37 @@ document.addEventListener("DOMContentLoaded", () => {
 
         const spotsLeft = details.max_participants - details.participants.length;
 
+        // Build participants HTML: show count and up to a short list of participants (emails or names)
+        const participantsCount = details.participants.length;
+        let participantsHtml = "";
+        if (participantsCount === 0) {
+          participantsHtml = `
+            <div class="participants">
+              <h4>Participants (0)</h4>
+              <p class="no-participants">No participants yet</p>
+            </div>
+          `;
+        } else {
+          const listItems = details.participants
+            .slice(0, 10)
+            .map((p) => `<li>${p}</li>`)
+            .join("");
+          participantsHtml = `
+            <div class="participants">
+              <h4>Participants (${participantsCount})</h4>
+              <ul class="participants-list">
+                ${listItems}
+              </ul>
+            </div>
+          `;
+        }
+
         activityCard.innerHTML = `
           <h4>${name}</h4>
           <p>${details.description}</p>
           <p><strong>Schedule:</strong> ${details.schedule}</p>
           <p><strong>Availability:</strong> ${spotsLeft} spots left</p>
+          ${participantsHtml}
         `;
 
         activitiesList.appendChild(activityCard);
@@ -60,11 +87,14 @@ document.addEventListener("DOMContentLoaded", () => {
 
       if (response.ok) {
         messageDiv.textContent = result.message;
-        messageDiv.className = "success";
+        messageDiv.className = "message success";
         signupForm.reset();
+
+        // Refresh activities so participant lists and availability update live
+        await fetchActivities();
       } else {
         messageDiv.textContent = result.detail || "An error occurred";
-        messageDiv.className = "error";
+        messageDiv.className = "message error";
       }
 
       messageDiv.classList.remove("hidden");
